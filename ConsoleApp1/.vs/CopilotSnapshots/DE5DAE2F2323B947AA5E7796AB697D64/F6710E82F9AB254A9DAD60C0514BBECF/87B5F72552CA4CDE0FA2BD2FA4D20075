@@ -1,0 +1,80 @@
+﻿using System;
+using System.IO;
+using System.Text.Json;
+using System.Text.Json.Serialization;
+using System.Collections.Generic;
+
+// Read JSON from app_data and deserialize into C# records with property mappings
+var file = Path.Combine("app_data", "A17030000J-000050-1oj.json");
+if (!File.Exists(file))
+{
+    Console.WriteLine($"File not found: {file}");
+    return;
+}
+
+var json = File.ReadAllText(file);
+var options = new JsonSerializerOptions
+{
+    PropertyNameCaseInsensitive = true
+};
+
+List<MarketRecord>? data;
+try
+{
+    data = JsonSerializer.Deserialize<List<MarketRecord>>(json, options);
+}
+catch (Exception ex)
+{
+    Console.WriteLine("Failed to parse JSON: " + ex.Message);
+    return;
+}
+
+if (data == null || data.Count == 0)
+{
+    Console.WriteLine("No data found.");
+    return;
+}
+
+// Print a simple table
+var headers = new[] { "月別", "台灣-加權指數", "台灣-上櫃指數", "美國-那斯達克指數", "美國-道瓊工業指數", "日本-日經225指數", "新加坡-海峽時報指數", "南韓-綜合指數", "倫敦-金融時報指數", "中國-上海綜合指數", "中國-香港恆生指數" };
+var widths = new int[headers.Length];
+for (int i = 0; i < headers.Length; i++) widths[i] = Math.Max(8, headers[i].Length + 1);
+
+// adjust widths by content
+foreach (var r in data)
+{
+    var values = r.ToArray();
+    for (int i = 0; i < values.Length; i++) widths[i] = Math.Max(widths[i], values[i]?.Length ?? 0 + 1);
+}
+
+// header
+for (int i = 0; i < headers.Length; i++) Console.Write(headers[i].PadRight(widths[i]));
+Console.WriteLine();
+Console.WriteLine(new string('-', widths.Sum()));
+
+// rows
+foreach (var r in data)
+{
+    var values = r.ToArray();
+    for (int i = 0; i < values.Length; i++) Console.Write((values[i] ?? "").PadRight(widths[i]));
+    Console.WriteLine();
+}
+
+// Record definition with JsonPropertyName attributes matching the Chinese keys
+public record MarketRecord(
+    [property: JsonPropertyName("月別")] string 月別,
+    [property: JsonPropertyName("台灣-加權指數")] string 台灣_加權指數,
+    [property: JsonPropertyName("台灣-上櫃指數")] string 台灣_上櫃指數,
+    [property: JsonPropertyName("美國-那斯達克指數")] string 美國_那斯達克指數,
+    [property: JsonPropertyName("美國-道瓊工業指數")] string 美國_道瓊工業指數,
+    [property: JsonPropertyName("日本-日經225指數")] string 日本_日經225指數,
+    [property: JsonPropertyName("新加坡-海峽時報指數")] string 新加坡_海峽時報指數,
+    [property: JsonPropertyName("南韓-綜合指數")] string 南韓_綜合指數,
+    [property: JsonPropertyName("倫敦-金融時報指數")] string 倫敦_金融時報指數,
+    [property: JsonPropertyName("中國-上海綜合指數")] string 中國_上海綜合指數,
+    [property: JsonPropertyName("中國-香港恆生指數")] string 中國_香港恆生指數
+)
+{
+    // helper to get values as array for printing
+    public string[] ToArray() => new[] { 月別, 台灣_加權指數, 台灣_上櫃指數, 美國_那斯達克指數, 美國_道瓊工業指數, 日本_日經225指數, 新加坡_海峽時報指數, 南韓_綜合指數, 倫敦_金融時報指數, 中國_上海綜合指數, 中國_香港恆生指數 };
+};
