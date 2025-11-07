@@ -8,17 +8,47 @@ public class Program
 {
     public static void Main(string[] args)
     {
-        var path = Path.Combine("app_data", "converted_file.json");
-        if (!File.Exists(path))
-        {
-            Console.WriteLine($"File not found: {path}");
-            return;
-        }
+        Console.WriteLine($"Working directory: {Directory.GetCurrentDirectory()}");
+
+        var defaultPath = Path.Combine("app_data", "converted_file.json");
 
         if (args.Length > 0 && string.Equals(args[0], "beautify", StringComparison.OrdinalIgnoreCase))
         {
-            BeautifyJson(path);
+            string input = defaultPath;
+            if (args.Length > 1 && !string.IsNullOrWhiteSpace(args[1]))
+            {
+                input = args[1];
+            }
+
+            BeautifyJson(input);
             return;
+        }
+
+        var path = defaultPath;
+
+        // If default file doesn't exist, try to find any .json under app_data and use the first one.
+        if (!File.Exists(path))
+        {
+            var appDataDir = Path.Combine(Directory.GetCurrentDirectory(), "app_data");
+            if (Directory.Exists(appDataDir))
+            {
+                var jsonFiles = Directory.GetFiles(appDataDir, "*.json");
+                if (jsonFiles.Length > 0)
+                {
+                    path = jsonFiles[0];
+                    Console.WriteLine($"Default file not found. Using first JSON in app_data: {path}");
+                }
+                else
+                {
+                    Console.WriteLine($"No JSON files found in: {appDataDir}");
+                    return;
+                }
+            }
+            else
+            {
+                Console.WriteLine($"File not found: {path}");
+                return;
+            }
         }
 
         string json = File.ReadAllText(path);
@@ -47,7 +77,7 @@ public class Program
 
         Console.WriteLine($"Parsed records: {records.Count}");
 
-        // 新增：計算不同公司的數量（以 公司代號 判別）
+        // 計算不同公司的數量（以 公司代號 判別）
         var uniqueCompanies = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
         foreach (var rec in records)
         {
@@ -71,11 +101,23 @@ public class Program
     {
         try
         {
+            if (!File.Exists(inputPath))
+            {
+                Console.WriteLine($"Input file not found: {inputPath}");
+                return;
+            }
+
             var json = File.ReadAllText(inputPath);
             using var doc = JsonDocument.Parse(json);
             var options = new JsonSerializerOptions { WriteIndented = true };
             var pretty = JsonSerializer.Serialize(doc.RootElement, options);
-            var outPath = Path.Combine("app_data", "converted_file_pretty.json");
+
+            var dir = Path.GetDirectoryName(inputPath) ?? "app_data";
+            var name = Path.GetFileNameWithoutExtension(inputPath);
+            var ext = Path.GetExtension(inputPath);
+            var outName = name + "_pretty" + (string.IsNullOrEmpty(ext) ? ".json" : ext);
+            var outPath = Path.Combine(dir, outName);
+
             File.WriteAllText(outPath, pretty);
             Console.WriteLine($"Beautified JSON written to: {outPath}");
         }
