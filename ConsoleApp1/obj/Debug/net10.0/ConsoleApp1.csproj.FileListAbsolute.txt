@@ -14,4 +14,4 @@ C:\Users\88695\Desktop\github\ConsoleApp1\obj\Debug\net10.0\ConsoleApp1.pdb
 C:\Users\88695\Desktop\github\ConsoleApp1\obj\Debug\net10.0\ConsoleApp1.genruntimeconfig.cache
 C:\Users\88695\Desktop\github\ConsoleApp1\obj\Debug\net10.0\ref\ConsoleApp1.dll
 C:\Users\88695\Desktop\github\ConsoleApp1\bin\Debug\net10.0\app_data\ConsoleApp1.csproj
-C:\Users\88695\Desktop\github\ConsoleApp1\bin\Debug\net10.0\app_data\gp_p_01.json
+C:\Users\88695\Desktop\github\ConsoleApp1\bin\Debug\net10.0\app_data\converted_file.json

@@ -1,101 +1,132 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.IO;
 using System.Text.Json;
 using System.Text.Json.Serialization;
-using System.Collections.Generic;
 
-// Read JSON from app_data and deserialize into C# records with property mappings
-var filename = "gp_p_01.json";
-var file = Path.Combine(AppContext.BaseDirectory, "app_data", filename);
-
-Console.WriteLine($"Looking for: {Path.GetFullPath(file)}");
-if (!File.Exists(file))
+public class Program
 {
-    Console.WriteLine($"File not found: {Path.GetFullPath(file)}");
-    return;
+    public static void Main(string[] args)
+    {
+        var path = Path.Combine("app_data", "converted_file.json");
+        if (!File.Exists(path))
+        {
+            Console.WriteLine($"File not found: {path}");
+            return;
+        }
+
+        if (args.Length > 0 && string.Equals(args[0], "beautify", StringComparison.OrdinalIgnoreCase))
+        {
+            BeautifyJson(path);
+            return;
+        }
+
+        string json = File.ReadAllText(path);
+        var options = new JsonSerializerOptions
+        {
+            PropertyNameCaseInsensitive = true,
+            ReadCommentHandling = JsonCommentHandling.Skip
+        };
+
+        List<Record>? records;
+        try
+        {
+            records = JsonSerializer.Deserialize<List<Record>>(json, options);
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Deserialize error: {ex.Message}");
+            return;
+        }
+
+        if (records == null)
+        {
+            Console.WriteLine("No records parsed.");
+            return;
+        }
+
+        Console.WriteLine($"Parsed records: {records.Count}");
+
+        // 新增：計算不同公司的數量（以 公司代號 判別）
+        var uniqueCompanies = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        foreach (var rec in records)
+        {
+            if (!string.IsNullOrWhiteSpace(rec.公司代號))
+                uniqueCompanies.Add(rec.公司代號.Trim());
+        }
+        Console.WriteLine($"Distinct companies (by 公司代號): {uniqueCompanies.Count}");
+
+        for (int i = 0; i < records.Count; i++)
+        {
+            var r = records[i];
+            Console.WriteLine($"[{i + 1}/{records.Count}] {r.公司代號} - {r.公司名稱} ({r.資料年月})");
+            Console.WriteLine($"  產業別: {r.產業別}");
+            Console.WriteLine($"  當月營收: {r.營業收入_當月營收}  上月營收: {r.營業收入_上月營收}  去年當月: {r.營業收入_去年當月營收}");
+            Console.WriteLine($"  累計當月累計營收: {r.累計營業收入_當月累計營收}  去年累計: {r.累計營業收入_去年累計營收}");
+            Console.WriteLine($"  備註: {r.備註}");
+        }
+    }
+
+    private static void BeautifyJson(string inputPath)
+    {
+        try
+        {
+            var json = File.ReadAllText(inputPath);
+            using var doc = JsonDocument.Parse(json);
+            var options = new JsonSerializerOptions { WriteIndented = true };
+            var pretty = JsonSerializer.Serialize(doc.RootElement, options);
+            var outPath = Path.Combine("app_data", "converted_file_pretty.json");
+            File.WriteAllText(outPath, pretty);
+            Console.WriteLine($"Beautified JSON written to: {outPath}");
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Beautify error: {ex.Message}");
+        }
+    }
 }
 
-var json = File.ReadAllText(file);
-var options = new JsonSerializerOptions
+public class Record
 {
-    PropertyNameCaseInsensitive = true
-};
+    [JsonPropertyName("出表日期")]
+    public string? 出表日期 { get; set; }
 
-RootData? root;
-try
-{
-    root = JsonSerializer.Deserialize<RootData>(json, options);
+    [JsonPropertyName("資料年月")]
+    public string? 資料年月 { get; set; }
+
+    [JsonPropertyName("公司代號")]
+    public string? 公司代號 { get; set; }
+
+    [JsonPropertyName("公司名稱")]
+    public string? 公司名稱 { get; set; }
+
+    [JsonPropertyName("產業別")]
+    public string? 產業別 { get; set; }
+
+    [JsonPropertyName("營業收入-當月營收")]
+    public string? 營業收入_當月營收 { get; set; }
+
+    [JsonPropertyName("營業收入-上月營收")]
+    public string? 營業收入_上月營收 { get; set; }
+
+    [JsonPropertyName("營業收入-去年當月營收")]
+    public string? 營業收入_去年當月營收 { get; set; }
+
+    [JsonPropertyName("營業收入-上月比較增減(%)")]
+    public string? 營業收入_上月比較增減_pct { get; set; }
+
+    [JsonPropertyName("營業收入-去年同月增減(%)")]
+    public string? 營業收入_去年同月增減_pct { get; set; }
+
+    [JsonPropertyName("累計營業收入-當月累計營收")]
+    public string? 累計營業收入_當月累計營收 { get; set; }
+
+    [JsonPropertyName("累計營業收入-去年累計營收")]
+    public string? 累計營業收入_去年累計營收 { get; set; }
+
+    [JsonPropertyName("累計營業收入-前期比較增減(%)")]
+    public string? 累計營業收入_前期比較增減_pct { get; set; }
+
+    [JsonPropertyName("備註")]
+    public string? 備註 { get; set; }
 }
-catch (Exception ex)
-{
-    Console.WriteLine("Failed to parse JSON: " + ex.Message);
-    return;
-}
-
-if (root == null)
-{
-    Console.WriteLine("No data parsed.");
-    return;
-}
-
-Console.WriteLine($"Resource: {root.ResourceId}");
-Console.WriteLine($"Total (metadata): {root.Total}");
-Console.WriteLine($"Records parsed: {root.Records?.Count ?? 0}");
-Console.WriteLine();
-
-// Print first 20 records in a simple table
-var records = root.Records ?? new List<Record>();
-int show = Math.Min(20, records.Count);
-if (show == 0)
-{
-    Console.WriteLine("No records to display.");
-    return;
-}
-
-var headers = new[] { "storeno", "storename", "storeaddr", "contacttel", "taxno" };
-var widths = new int[headers.Length];
-for (int i = 0; i < headers.Length; i++) widths[i] = Math.Max(8, headers[i].Length + 1);
-for (int i = 0; i < show; i++)
-{
-    var r = records[i];
-    widths[0] = Math.Max(widths[0], (r.Storeno ?? "").Length + 1);
-    widths[1] = Math.Max(widths[1], (r.Storename ?? "").Length + 1);
-    widths[2] = Math.Max(widths[2], (r.Storeaddr ?? "").Length + 1);
-    widths[3] = Math.Max(widths[3], (r.Contacttel ?? "").Length + 1);
-    widths[4] = Math.Max(widths[4], (r.Taxno ?? "").Length + 1);
-}
-
-// header
-for (int i = 0; i < headers.Length; i++) Console.Write(headers[i].PadRight(widths[i]));
-Console.WriteLine();
-Console.WriteLine(new string('-', widths.Sum()));
-
-for (int i = 0; i < show; i++)
-{
-    var r = records[i];
-    Console.Write((r.Storeno ?? "").PadRight(widths[0]));
-    Console.Write((r.Storename ?? "").PadRight(widths[1]));
-    Console.Write((r.Storeaddr ?? "").PadRight(widths[2]));
-    Console.Write((r.Contacttel ?? "").PadRight(widths[3]));
-    Console.Write((r.Taxno ?? "").PadRight(widths[4]));
-    Console.WriteLine();
-}
-
-// Record definition with JsonPropertyName attributes matching the Chinese keys
-public record MarketRecord(
-    [property: JsonPropertyName("月別")] string 月別,
-    [property: JsonPropertyName("台灣-加權指數")] string 台灣_加權指數,
-    [property: JsonPropertyName("台灣-上櫃指數")] string 台灣_上櫃指數,
-    [property: JsonPropertyName("美國-那斯達克指數")] string 美國_那斯達克指數,
-    [property: JsonPropertyName("美國-道瓊工業指數")] string 美國_道瓊工業指數,
-    [property: JsonPropertyName("日本-日經225指數")] string 日本_日經225指數,
-    [property: JsonPropertyName("新加坡-海峽時報指數")] string 新加坡_海峽時報指數,
-    [property: JsonPropertyName("南韓-綜合指數")] string 南韓_綜合指數,
-    [property: JsonPropertyName("倫敦-金融時報指數")] string 倫敦_金融時報指數,
-    [property: JsonPropertyName("中國-上海綜合指數")] string 中國_上海綜合指數,
-    [property: JsonPropertyName("中國-香港恆生指數")] string 中國_香港恆生指數
-)
-{
-    // helper to get values as array for printing
-    public string[] ToArray() => new[] { 月別, 台灣_加權指數, 台灣_上櫃指數, 美國_那斯達克指數, 美國_道瓊工業指數, 日本_日經225指數, 新加坡_海峽時報指數, 南韓_綜合指數, 倫敦_金融時報指數, 中國_上海綜合指數, 中國_香港恆生指數 };
-};

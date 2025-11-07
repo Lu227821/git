@@ -1,0 +1,148 @@
+﻿using System;
+using System.Collections.Generic;
+using System.IO;
+using System.Text.Json;
+using System.Text.Json.Serialization;
+
+public class Program
+{
+    public static void Main()
+    {
+        var path = Path.Combine("app_data", "gp_p_01.json");
+        if (!File.Exists(path))
+        {
+            Console.WriteLine($"File not found: {path}");
+            return;
+        }
+
+        var json = File.ReadAllText(path);
+        var options = new JsonSerializerOptions
+        {
+            PropertyNameCaseInsensitive = true
+        };
+
+        Root? root;
+        try
+        {
+            root = JsonSerializer.Deserialize<Root>(json, options);
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Deserialize error: {ex.Message}");
+            return;
+        }
+
+        if (root == null)
+        {
+            Console.WriteLine("Parsed root is null");
+            return;
+        }
+
+        Console.WriteLine($"Resource: {root.ResourceId}");
+        Console.WriteLine($"Total records (metadata): {root.Total}");
+        Console.WriteLine($"Records array length: {root.Records?.Count ?? 0}");
+
+        if (root.Records != null && root.Records.Count > 0)
+        {
+            var first = root.Records[0];
+            Console.WriteLine("First record:");
+            Console.WriteLine($"  StoreNo: {first.StoreNo}");
+            Console.WriteLine($"  StoreName: {first.StoreName}");
+            Console.WriteLine($"  Address: {first.StoreAddr}");
+            Console.WriteLine($"  Contact: {first.ContactTel}");
+        }
+    }
+}
+
+public class Root
+{
+    [JsonPropertyName("fields")]
+    public List<Field>? Fields { get; set; }
+
+    [JsonPropertyName("resource_id")]
+    public string? ResourceId { get; set; }
+
+    [JsonPropertyName("__extras")]
+    public Extras? Extras { get; set; }
+
+    [JsonPropertyName("include_total")]
+    public bool? IncludeTotal { get; set; }
+
+    [JsonPropertyName("total")]
+    public string? Total { get; set; }
+
+    [JsonPropertyName("resource_format")]
+    public string? ResourceFormat { get; set; }
+
+    [JsonPropertyName("limit")]
+    public string? Limit { get; set; }
+
+    [JsonPropertyName("offset")]
+    public string? Offset { get; set; }
+
+    [JsonPropertyName("_links")]
+    public Links? Links { get; set; }
+
+    [JsonPropertyName("records")]
+    public List<Record>? Records { get; set; }
+}
+
+public class Field
+{
+    [JsonPropertyName("id")]
+    public string? Id { get; set; }
+
+    [JsonPropertyName("type")]
+    public string? Type { get; set; }
+
+    [JsonPropertyName("info")]
+    public FieldInfo? Info { get; set; }
+}
+
+public class FieldInfo
+{
+    [JsonPropertyName("label")]
+    public string? Label { get; set; }
+}
+
+public class Extras
+{
+    [JsonPropertyName("api_key")]
+    public string? ApiKey { get; set; }
+}
+
+public class Links
+{
+    [JsonPropertyName("start")]
+    public string? Start { get; set; }
+
+    [JsonPropertyName("next")]
+    public string? Next { get; set; }
+}
+
+public class Record
+{
+    [JsonPropertyName("classtype")]
+    public string? ClassType { get; set; }
+
+    [JsonPropertyName("flagno")]
+    public string? FlagNo { get; set; }
+
+    [JsonPropertyName("storeno")]
+    public string? StoreNo { get; set; }
+
+    [JsonPropertyName("storename")]
+    public string? StoreName { get; set; }
+
+    [JsonPropertyName("undertaker")]
+    public string? Undertaker { get; set; }
+
+    [JsonPropertyName("storeaddr")]
+    public string? StoreAddr { get; set; }
+
+    [JsonPropertyName("contacttel")]
+    public string? ContactTel { get; set; }
+
+    [JsonPropertyName("taxno")]
+    public string? TaxNo { get; set; }
+}
